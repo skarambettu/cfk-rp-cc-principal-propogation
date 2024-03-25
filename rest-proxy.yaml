@@ -1,0 +1,41 @@
+apiVersion: platform.confluent.io/v1beta1
+kind: KafkaRestProxy
+metadata:
+  name: kafkarestproxy
+  namespace: confluent
+spec:
+  mountedSecrets:
+    - secretRef: sandesh-secret
+  configOverrides:
+    log4j:
+      - log4j.rootLogger=DEBUG, stdout
+  configOverrides:
+    server:
+      - kafka.rest.resource.extension.class=io.confluent.kafkarest.security.KafkaRestSecurityResourceExtension
+      - client.security.protocol=SASL_SSL
+      - confluent.rest.auth.propagate.method=JETTY_AUTH
+      - authentication.method=BASIC
+      - authentication.realm=KafkaRest
+      - authentication.roles=krp-users
+    jvm:
+      - "-Djava.security.auth.login.config=/mnt/secrets/sandesh-secret/restProxyUsers.jaas"
+  replicas: 1
+  image:
+    application: confluentinc/cp-kafka-rest:7.4.0
+    init: confluentinc/confluent-init-container:2.6.0
+  dependencies:
+    schemaRegistry:
+      url: https://psrc-3508o.westus2.azure.confluent.cloud:443
+      authentication:
+        type: basic
+        basic:
+          secretRef: cloud-sr-access
+    kafka:
+      bootstrapEndpoint: pkc-6ojv2.us-west4.gcp.confluent.cloud:9092
+      authentication:
+        type: plain
+        jaasConfig:
+          secretRef: cloud-plain
+      tls:
+        enabled: true
+        ignoreTrustStoreConfig: true
